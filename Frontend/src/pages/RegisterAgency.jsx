@@ -21,7 +21,11 @@ export default function RegisterAgency() {
       setSuccess(res.data.message || 'Agency registered successfully. Redirecting to login...')
       setTimeout(() => navigate('/login'), 800)
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed')
+        if (!err.response) {
+          setError('Network error. Check backend URL/server and make sure browser DevTools is not set to Offline.')
+        } else {
+          setError(err.response?.data?.message || 'Registration failed')
+        }
     } finally {
       setLoading(false)
     }
