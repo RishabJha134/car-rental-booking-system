@@ -1,7 +1,10 @@
-import React from 'react'
+import React, { useContext } from 'react'
 import { Link } from 'react-router-dom'
+import AuthContext from '../context/AuthContext'
 
 export default function Home() {
+  const { user } = useContext(AuthContext)
+
   return (
     <div className="grid gap-8 lg:grid-cols-[1.4fr_0.9fr]">
       <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-cyan-500/20 via-slate-900 to-indigo-500/20 p-8 shadow-2xl shadow-cyan-950/30">
@@ -16,9 +19,21 @@ export default function Home() {
           <Link to="/cars" className="rounded-full bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300">
             Browse Cars
           </Link>
-          <Link to="/register-customer" className="rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/5">
-            Create Customer Account
-          </Link>
+          {!user && (
+            <Link to="/register-customer" className="rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/5">
+              Create Customer Account
+            </Link>
+          )}
+          {user?.role === 'customer' && (
+            <Link to="/my-bookings" className="rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/5">
+              View My Bookings
+            </Link>
+          )}
+          {user?.role === 'agency' && (
+            <Link to="/agency/bookings" className="rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/5">
+              Open Agency Panel
+            </Link>
+          )}
         </div>
       </section>
 
