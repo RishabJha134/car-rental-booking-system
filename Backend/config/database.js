@@ -424,6 +424,11 @@ function createMemoryPool(initialStore) {
 
 let activePool = null;
 
+function activateMemoryDatabase(reason) {
+  activePool = createMemoryPool(createSeedStore());
+  console.warn(`Using in-memory database fallback${reason ? ` (${reason})` : ''}.`);
+}
+
 const pool = {
   async query(sql, values = []) {
     if (!activePool) {
@@ -445,8 +450,8 @@ async function initializeDatabase() {
   const mysqlUrl = process.env.MYSQL_URL;
 
   if (!mysqlUrl) {
-    console.error('MYSQL_URL is missing. The application requires a MySQL database. Aborting initialization.');
-    process.exit(1);
+    activateMemoryDatabase('MYSQL_URL is missing');
+    return;
   }
 
   try {
@@ -475,8 +480,7 @@ async function initializeDatabase() {
       connection.release();
     }
   } catch (error) {
-    console.error(`MySQL is unavailable (${error.message}). Aborting initialization.`);
-    process.exit(1);
+    activateMemoryDatabase(error.message);
   }
 }
 
