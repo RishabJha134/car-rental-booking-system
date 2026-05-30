@@ -12,11 +12,14 @@ import AgencyBookings from './pages/AgencyBookings'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import AuthContext from './context/AuthContext'
+import { ToastProvider } from './components/ToastContext'
 
 export default function App() {
   return (
     <AuthProvider>
-      <Layout />
+      <ToastProvider>
+        <Layout />
+      </ToastProvider>
     </AuthProvider>
   )
 }

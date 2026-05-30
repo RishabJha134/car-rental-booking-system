@@ -2,9 +2,17 @@ const { pool } = require('../config/database');
 const Car = require('../models/Car');
 const Booking = require('../models/Booking');
 
+function getTodayDateString() {
+  return new Date().toLocaleDateString('en-CA');
+}
+
+function isValidDateInput(dateString) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(dateString);
+}
+
 function calculateDays(startDate, endDate) {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  const start = new Date(`${startDate}T00:00:00Z`);
+  const end = new Date(`${endDate}T00:00:00Z`);
   const diffInTime = end.getTime() - start.getTime();
   return Math.ceil(diffInTime / (1000 * 60 * 60 * 24));
 }
@@ -20,6 +28,7 @@ async function createBooking(req, res, next) {
 
   try {
     const { carId, startDate, endDate } = req.body;
+    const today = getTodayDateString();
 
     if (!carId || !startDate || !endDate) {
       return res.status(400).json({
@@ -28,7 +37,21 @@ async function createBooking(req, res, next) {
       });
     }
 
-    if (new Date(startDate) >= new Date(endDate)) {
+    if (!isValidDateInput(startDate) || !isValidDateInput(endDate)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please select valid booking dates.',
+      });
+    }
+
+    if (startDate < today) {
+      return res.status(400).json({
+        success: false,
+        message: 'Start date cannot be earlier than today.',
+      });
+    }
+
+    if (startDate >= endDate) {
       return res.status(400).json({
         success: false,
         message: 'End date must be after start date.',

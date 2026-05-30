@@ -2,17 +2,28 @@ import React, { useContext, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import AuthContext from '../context/AuthContext'
+import { useToast } from '../components/ToastContext'
+
+function getTodayDateString() {
+  return new Date().toLocaleDateString('en-CA')
+}
+
+function addDays(dateString, days) {
+  const date = new Date(`${dateString}T00:00:00Z`)
+  date.setUTCDate(date.getUTCDate() + days)
+  return date.toISOString().split('T')[0]
+}
 
 export default function AvailableCars() {
   const [cars, setCars] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [bookingForm, setBookingForm] = useState({})
-  const [bookingMessage, setBookingMessage] = useState(null)
-  const [bookingError, setBookingError] = useState(null)
   const [bookingLoadingId, setBookingLoadingId] = useState(null)
   const { user } = useContext(AuthContext)
+  const toast = useToast()
   const navigate = useNavigate()
+  const today = useMemo(() => getTodayDateString(), [])
 
   useEffect(() => {
     async function load() {
@@ -34,38 +45,39 @@ export default function AvailableCars() {
 
   async function handleBook(carId) {
     const form = bookingForm[carId] || {}
-    setBookingError(null)
-    setBookingMessage(null)
+
     if (!user) {
-      setBookingError('Please log in with a customer account to book.')
+      toast.error('Please log in with a customer account to book.')
       return
     }
 
     if (user.role !== 'customer') {
-      setBookingError('Only customer accounts can create bookings.')
+      toast.error('Only customer accounts can create bookings.')
       return
     }
 
     if (!form.startDate) {
-      setBookingError('Please choose a start date.')
+      toast.error('Please choose a start date.')
+      return
+    }
+
+    if (form.startDate < today) {
+      toast.error('Start date cannot be earlier than today.')
       return
     }
 
     let endDate = form.endDate
 
     if (!endDate) {
-      const sd = new Date(form.startDate)
-      const ed = new Date(sd)
-      ed.setDate(sd.getDate() + 1)
-      endDate = ed.toISOString().split('T')[0]
+      endDate = addDays(form.startDate, 1)
       setBookingForm((current) => ({
         ...current,
         [carId]: { ...form, endDate },
       }))
     }
 
-    if (new Date(endDate) <= new Date(form.startDate)) {
-      setBookingError('End date must be after start date.')
+    if (endDate <= form.startDate) {
+      toast.error('End date must be after start date.')
       return
     }
 
@@ -77,14 +89,14 @@ export default function AvailableCars() {
         startDate: form.startDate,
         endDate,
       })
-      setBookingMessage(res.data.message || 'Booking created successfully')
+      toast.success(res.data.message || 'Booking created successfully')
       setBookingForm((current) => ({
         ...current,
         [carId]: { startDate: '', endDate: '' },
       }))
       navigate('/my-bookings')
     } catch (e) {
-      setBookingError(e.response?.data?.message || 'Booking failed')
+      toast.error(e.response?.data?.message || 'Booking failed')
     } finally {
       setBookingLoadingId(null)
     }
@@ -104,8 +116,6 @@ export default function AvailableCars() {
         )}
       </div>
       {error && <div className="mb-4 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">{error}</div>}
-      {bookingError && <div className="mb-4 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">{bookingError}</div>}
-      {bookingMessage && <div className="mb-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">{bookingMessage}</div>}
       {loading ? (
         <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-slate-300">Loading cars...</div>
       ) : (
@@ -151,6 +161,7 @@ export default function AvailableCars() {
                       <input
                         type="date"
                         value={current.startDate}
+                        min={today}
                         onChange={(e) => setBookingForm((state) => ({ ...state, [car.id]: { ...current, startDate: e.target.value } }))}
                         className="w-full rounded-xl border border-white/10 bg-slate-900/60 px-4 py-3 text-white outline-none focus:border-cyan-400"
                       />
@@ -160,6 +171,7 @@ export default function AvailableCars() {
                       <input
                         type="date"
                         value={current.endDate}
+                        min={current.startDate || today}
                         onChange={(e) => setBookingForm((state) => ({ ...state, [car.id]: { ...current, endDate: e.target.value } }))}
                         className="w-full rounded-xl border border-white/10 bg-slate-900/60 px-4 py-3 text-white outline-none focus:border-cyan-400"
                       />
