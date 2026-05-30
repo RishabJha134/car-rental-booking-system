@@ -15,18 +15,23 @@ function parseJwt(token) {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
+  const [isAuthReady, setIsAuthReady] = useState(false)
 
   useEffect(() => {
     const stored = localStorage.getItem('cr_token')
     if (stored) {
       api.defaults.headers.common['Authorization'] = `Bearer ${stored}`
       const payload = parseJwt(stored)
-      if (payload) {
+      const isExpired = payload?.exp ? payload.exp * 1000 <= Date.now() : false
+      if (payload && !isExpired) {
         setUser({ id: payload.id, name: payload.name || payload.sub || '', role: payload.role, token: stored })
       } else {
-        setUser({ token: stored })
+        localStorage.removeItem('cr_token')
+        delete api.defaults.headers.common['Authorization']
+        setUser(null)
       }
     }
+    setIsAuthReady(true)
   }, [])
 
   function login(token, userInfo) {
@@ -48,7 +53,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, isAuthReady }}>
       {children}
     </AuthContext.Provider>
   )

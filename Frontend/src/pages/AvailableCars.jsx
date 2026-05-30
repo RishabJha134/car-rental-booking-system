@@ -11,7 +11,6 @@ export default function AvailableCars() {
   const [bookingMessage, setBookingMessage] = useState(null)
   const [bookingError, setBookingError] = useState(null)
   const [bookingLoadingId, setBookingLoadingId] = useState(null)
-   const [rentalDays, setRentalDays] = useState({})
   const { user } = useContext(AuthContext)
   const navigate = useNavigate()
 
@@ -37,22 +36,46 @@ export default function AvailableCars() {
     const form = bookingForm[carId] || {}
     setBookingError(null)
     setBookingMessage(null)
-    setBookingLoadingId(carId)
-     const days = Number(rentalDays[carId] || 1)
-     // if user uses startDate + days dropdown, compute endDate
-    if (form.startDate && (!form.endDate || form.endDate === '')) {
+    if (!user) {
+      setBookingError('Please log in with a customer account to book.')
+      return
+    }
+
+    if (user.role !== 'customer') {
+      setBookingError('Only customer accounts can create bookings.')
+      return
+    }
+
+    if (!form.startDate) {
+      setBookingError('Please choose a start date.')
+      return
+    }
+
+    let endDate = form.endDate
+
+    if (!endDate) {
       const sd = new Date(form.startDate)
       const ed = new Date(sd)
-      // endDate is inclusive: add days-1
-      ed.setDate(sd.getDate() + days - 1)
-      form.endDate = ed.toISOString().split('T')[0]
+      ed.setDate(sd.getDate() + 1)
+      endDate = ed.toISOString().split('T')[0]
+      setBookingForm((current) => ({
+        ...current,
+        [carId]: { ...form, endDate },
+      }))
     }
+
+    if (new Date(endDate) <= new Date(form.startDate)) {
+      setBookingError('End date must be after start date.')
+      return
+    }
+
+    setBookingLoadingId(carId)
 
     try {
       const res = await api.post('/bookings', {
         carId,
         startDate: form.startDate,
-        endDate: form.endDate,
+        endDate,
       })
       setBookingMessage(res.data.message || 'Booking created successfully')
       setBookingForm((current) => ({
@@ -144,7 +167,7 @@ export default function AvailableCars() {
                   </div>
 
                   <button
-                    disabled={!user || bookingLoadingId === car.id || !current.startDate}
+                    disabled={!user || user.role !== 'customer' || bookingLoadingId === car.id || !current.startDate}
                     onClick={() => handleBook(car.id)}
                     className="w-full rounded-xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
                   >

@@ -49,6 +49,19 @@ JWT_SECRET=your_super_secret_jwt_key
 MYSQL_URL=mysql://USER:PASSWORD@HOST:PORT/DATABASE?ssl-mode=REQUIRED
 ```
 
+### Railway MySQL
+
+If you are using Railway MySQL:
+
+- Local development: use Railway **public** MySQL URL in `MYSQL_URL`.
+- Deployed on Railway (backend + DB): use Railway **internal** MySQL URL.
+
+Example format:
+
+```env
+MYSQL_URL=mysql://USER:PASSWORD@HOST:PORT/DATABASE
+```
+
 Frontend (optional): create `Frontend/.env` to override API URL.
 
 ```env
